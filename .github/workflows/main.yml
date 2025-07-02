@@ -1,0 +1,57 @@
+name: Build OpenHarmony App
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-20.04
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.8'
+          
+      - name: Install Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '16.19.1'
+          
+      - name: Install OHOS SDK
+        run: |
+          # 创建 SDK 目录
+          mkdir -p ~/ohos-sdk
+          cd ~/ohos-sdk
+          
+          # 下载并安装 SDK
+          wget https://mirrors.tuna.tsinghua.edu.cn/ohos-sdk/latest/ohos-sdk-full.tar.gz
+          tar -xzf ohos-sdk-full.tar.gz
+          
+          # 设置环境变量
+          echo "OHOS_SDK_HOME=$HOME/ohos-sdk" >> $GITHUB_ENV
+          echo "$HOME/ohos-sdk/tools/bin" >> $GITHUB_PATH
+          
+      - name: Install DevEco Studio dependencies
+        run: |
+          npm install -g @ohos/cli
+          hpm init
+          hpm install
+          
+      - name: Build HarmonyOS App
+        run: |
+          cd $GITHUB_WORKSPACE
+          hb set -root .
+          hb build -f
+          
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: ohos-app-build
+          path: out/**/*.hap
